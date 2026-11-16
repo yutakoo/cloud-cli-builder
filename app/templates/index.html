@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" data-provider="aws">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud CLI Builder</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <a class="brand" href="#/" id="homeLink" title="Home">
+    <span class="brand-mark">&gt;_</span>
+    <span class="brand-name">Cloud CLI Builder</span>
+  </a>
+  <div class="global-search">
+    <input id="globalSearch" type="search" placeholder="Search commands, or paste an aws command (e.g. ec2 stop / インスタンス 一覧)" autocomplete="off">
+    <div id="globalResults" class="global-results" hidden></div>
+  </div>
+  <div class="theme-picker">
+    <button id="themeToggle" class="btn ghost theme-toggle" title="Change the color theme" aria-haspopup="true" aria-expanded="false">◐ <span>Theme</span></button>
+    <div id="themeMenu" class="theme-menu" role="menu" hidden></div>
+  </div>
+</header>
+
+<aside class="nav" id="nav" data-level="services">
+
+  <section class="pane services">
+    <div class="pane-head">
+      <h2>Services</h2>
+      <input id="serviceFilter" type="search" placeholder="Filter (e.g. ec2 / storage)">
+      <label class="chk"><input type="checkbox" id="onlyJa"> Major services only</label>
+    </div>
+    <ul id="serviceList" class="list"></ul>
+  </section>
+
+  <section class="pane commands">
+    <div class="pane-head">
+      <button id="navBack" class="nav-back" type="button">← All services</button>
+      <h2 id="commandsTitle">Commands</h2>
+      <a id="serviceDocLink" class="doclink small" target="_blank" rel="noopener" hidden>📘 Service reference</a>
+      <input id="commandFilter" type="search" placeholder="Filter (e.g. list / create)">
+    </div>
+    <ul id="commandList" class="list"></ul>
+  </section>
+
+</aside>
+
+<main class="work" id="builder">
+    <div class="preview" id="preview" hidden>
+      <div class="preview-bar">
+        <select id="shellSelect" class="cmd-only" title="Line continuation and quoting style">
+          <option value="bash">Bash / zsh (\ continuation)</option>
+          <option value="pwsh">PowerShell (` continuation)</option>
+          <option value="cmd">Command Prompt (^ continuation)</option>
+          <option value="bat">.bat file (^ continuation)</option>
+          <option value="oneline">One line</option>
+        </select>
+        <button id="resetBtn" class="btn ghost cmd-only" title="Clears the parameters you entered for this command. Global options such as --region and --profile are kept.">Clear parameters</button>
+        <span class="grow"></span>
+        <span class="fav-group">
+          <button id="favToggle" class="btn" title="Open saved commands and copy history">★ Favorites <span id="favCount" class="count">0</span></button>
+          <button id="saveFavBtn" class="btn cmd-only" title="Save the command below with a name and a memo">＋ Add to favorites</button>
+        </span>
+        <button id="copyBtn" class="btn primary cmd-only" title="Copy the command below to the clipboard"><span class="lbl">Copy command</span><span class="lbl-done" hidden>✓ Copied</span></button>
+      </div>
+      <div id="riskNote" class="risk-note cmd-only" role="note" hidden></div>
+      <pre id="cmdOutput" translate="no" class="strip cmd-output cmd-only" title="Click an option to jump to its field"></pre>
+      <div id="pasteNote" class="paste-note cmd-only" role="status" hidden></div>
+      <div class="preview-foot">Reference: <a id="previewDocLink" target="_blank" rel="noopener"></a></div>
+    </div>
+    <div class="home" id="builderEmpty">
+      <!-- トップ画面は内容が固定なので、英語版と日本語版を両方持ち、ボタンで切り替える（Claude 不要） -->
+      <section class="home-hero">
+        <div class="home-top"><button id="homeLangBtn" class="btn home-lang" translate="no" title="日本語 / English">日本語</button></div>
+        <pre class="strip strip-demo" translate="no" aria-hidden="true"><span class="prompt">$</span><span class="tok-base">aws ec2 describe-instances</span> <span class="tok-opt">--filters</span> <span class="tok-val">Name=instance-state-name,Values=running</span> <span class="tok-opt">--region</span> <span class="tok-val">ap-northeast-1</span><span class="caret"></span></pre>
+        <div class="i18n-en">
+          <h1>Pick a command. Mark what you need. Copy.</h1>
+          <p>Choose a service and a command on the left. Every option you fill in is highlighted, and the command at the top of the screen updates as you type. Each command links to its official reference.</p>
+        </div>
+        <div class="i18n-ja" translate="no">
+          <h1>選ぶ。印を付ける。コピーする。</h1>
+          <p>左の一覧でサービスとコマンドを選びます。入力したオプションには蛍光ペンの印が付き、画面上部のコマンドが入力に合わせて組み上がります。すべてのコマンドに公式リファレンスへのリンクが付いています。</p>
+        </div>
+        <div class="home-quick" id="homeQuick"></div>
+      </section>
+
+      <section class="home-card i18n-en">
+        <h2>How to use</h2>
+        <ol class="home-steps">
+          <li><b>Find a command</b><span>Pick a service and then a command on the left, or search above. Search matches the start of words in command names (e.g. <code>inst</code> → <code>describe-instances</code>), <code>ec2 stop</code> narrows to EC2, and Japanese such as「インスタンス 一覧」also works.</span></li>
+          <li><b>Or paste a command</b><span>Paste an <code>aws …</code> command from a blog or the docs into the search box (or anywhere on the page) to open it with the fields filled in. Nothing is executed.</span></li>
+          <li><b>Fill in parameters</b><span>The command at the top is assembled as you type; click an option in it to jump to its field. Commands that delete or stop resources are marked in red or yellow, with an “Add --dry-run” button when available.</span></li>
+          <li><b>Copy</b><span>Choose Bash / PowerShell / Command Prompt / .bat file / one line, then press “Copy command”. Line continuations and quoting follow the format.</span></li>
+          <li><b>Save to favorites</b><span>Save with a name and a memo via “＋ Add to favorites”. Open them with “★ Favorites” and restore one with “Open in builder”. Export/import as JSON.</span></li>
+        </ol>
+      </section>
+      <section class="home-card i18n-ja" translate="no">
+        <h2>使い方</h2>
+        <ol class="home-steps">
+          <li><b>コマンドを探す</b><span>左の一覧でサービス → コマンドの順に選ぶか、上の検索欄で探します。検索はコマンド名の単語の先頭で一致し（例: <code>inst</code> → <code>describe-instances</code>）、<code>ec2 stop</code> のように書くと EC2 に絞れます。「インスタンス 一覧」のような日本語でも探せます。</span></li>
+          <li><b>コマンドを貼り付ける</b><span>ブログやドキュメントの <code>aws …</code> を検索欄（または画面のどこか）に貼り付けると、入力欄が埋まった状態で開きます。貼ったコマンドは実行されません。</span></li>
+          <li><b>パラメータを入力する</b><span>画面上部のコマンドが入力に合わせて組み上がります。コマンド内のオプションを押すと、その入力欄へ移動します。削除・停止などの操作は赤・黄色で示し、使えるときは「Add --dry-run」ボタンも出ます。</span></li>
+          <li><b>コピーする</b><span>Bash ／ PowerShell ／ コマンドプロンプト ／ .bat ファイル ／ 1行 から形式を選んで「Copy command」。改行記号と引用符が形式に合わせて変わります。</span></li>
+          <li><b>お気に入りに残す</b><span>「＋ Add to favorites」で名前とメモを付けて保存。「★ Favorites」から開き、「Open in builder」で入力内容ごと呼び出せます。JSON でエクスポート／インポートもできます。</span></li>
+        </ol>
+      </section>
+
+      <section class="home-card i18n-en">
+        <h2>Claude integration <span class="pill {{ 'ok' if claude.available else 'off' }}">{{ "Available" if claude.available else "Not configured" }}</span></h2>
+        <ul class="home-list">
+          <li><b>🤖 Claudeで日本語化</b>: switches the command screen to Japanese. Sentences found in the dictionaries are translated without Claude; only the remaining sentences are sent to Claude (split into small batches and translated in parallel) and saved to the learned dictionary. Works only when Claude is configured.</li>
+          <li>Claude runs only when you press the button, and it cannot use any tools (no web access, no commands, no file access).</li>
+        </ul>
+        {% if not claude.available %}<p class="home-warn">{{ claude.reason }}</p>{% endif %}
+      </section>
+      <section class="home-card i18n-ja" translate="no">
+        <h2>Claude 連携 <span class="pill {{ 'ok' if claude.available else 'off' }}">{{ "利用できます" if claude.available else "未設定" }}</span></h2>
+        <ul class="home-list">
+          <li><b>🤖 Claudeで日本語化</b>：コマンド画面を日本語にします。辞書にある文は Claude を使わずに訳し、辞書にない文だけを Claude に送ります（小分けにして並行して訳します）。訳した文は学習辞書に保存されます。Claude 連携が設定されているときだけ使えます。</li>
+          <li>Claude はボタンを押したときだけ実行され、ツールは一切使えません（Web の読み込み・コマンド実行・ファイル操作はできません）。</li>
+          <li>このトップ画面の日本語表示は Claude を使いません。</li>
+        </ul>
+        {% if not claude.available %}<p class="home-warn">{{ claude.reason_ja }}</p>{% endif %}
+      </section>
+
+      <p class="meta"><span class="i18n-en">Data: botocore {{ botocore_version }}</span><span class="i18n-ja" translate="no">データ: botocore {{ botocore_version }}</span></p>
+    </div>
+    <div id="builderBody" hidden>
+      <div class="cmd-head">
+        <div class="crumb" translate="no"><span id="crumbService"></span> › <span id="crumbCommand"></span></div>
+        <h1 id="cmdJa" translate="no"></h1>
+        <p id="cmdSummary" class="en"></p>
+        <div class="ref-box">
+          <span class="ref-label">Reference</span>
+          <a id="cmdDocLink" target="_blank" rel="noopener" class="ref-url"></a>
+        </div>
+        <div class="ai-bar">
+          <button id="aiLocalizeBtn" class="btn ai"><span class="ai-icon">🤖</span> <span id="aiLocalizeLabel" translate="no">Claudeで日本語化</span></button>
+          <select id="aiScope" title="What to translate (dictionary hits are never sent to Claude)">
+            <option value="all">All fields</option>
+            <option value="filled">Required &amp; filled only (faster)</option>
+            <option value="dict">Dictionary only (no Claude)</option>
+          </select>
+          <span id="aiStatus" class="ai-status" role="status"></span>
+        </div>
+        <p id="aiNote" class="ai-note" hidden></p>
+      </div>
+
+      <div id="positionals" class="group" hidden>
+        <h3>Positional arguments</h3>
+        <div class="fields" id="positionalFields"></div>
+      </div>
+
+      <div class="group" id="requiredGroup" hidden>
+        <h3>Required parameters</h3>
+        <div class="fields" id="requiredFields"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-head">
+          <h3>Options <span id="optCount" class="count"></span></h3>
+          <input id="paramFilter" type="search" placeholder="Filter parameters">
+          <label class="chk"><input type="checkbox" id="onlyFilled"> Filled only</label>
+        </div>
+        <div class="fields" id="optionalFields"></div>
+      </div>
+
+      <details class="group" id="paginationGroup" hidden>
+        <summary><h3>Pagination</h3></summary>
+        <div class="fields" id="paginationFields"></div>
+      </details>
+
+      <details class="group" open>
+        <summary><h3>Global options <span class="hint">(kept when you switch commands)</span></h3></summary>
+        <div class="fields" id="globalFields"></div>
+      </details>
+    </div>
+
+</main>
+</div>
+
+<aside id="favDrawer" class="drawer" hidden>
+  <div class="drawer-head">
+    <h2>★ Favorites</h2>
+    <button id="favClose" class="btn ghost icon" title="Close">✕</button>
+  </div>
+  <div class="drawer-tabs">
+    <button data-tab="current" class="active">Favorites</button>
+    <button data-tab="history">Recently copied</button>
+  </div>
+  <input id="favFilter" type="search" placeholder="Search favorites">
+  <ul id="favList" class="fav-list"></ul>
+  <div class="drawer-foot">
+    <a class="btn ghost" href="/api/favorites/export">Export</a>
+    <label class="btn ghost">Import<input type="file" id="favImport" accept="application/json" hidden></label>
+  </div>
+</aside>
+
+<dialog id="favDialog" class="form-dialog">
+  <form method="dialog" id="favForm">
+    <h2 id="favDialogTitle">Add to favorites</h2>
+    <div class="dlg-body">
+      <label>Name<input name="title" required></label>
+      <label>Memo<textarea name="memo" rows="3" placeholder="Purpose, caveats, etc."></textarea></label>
+      <label>Command<textarea name="command" rows="5" class="mono"></textarea></label>
+    </div>
+    <div class="dialog-actions">
+      <button value="cancel" class="btn" formnovalidate>Cancel</button>
+      <button value="ok" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+<!-- 画面の初期データ。実行されない JSON として埋め込む（CSP でインラインスクリプトを禁止しているため） -->
+<script type="application/json" id="bootData">{{ {"ja_search": ja_search, "claude": claude, "ui_ja": ui_ja} | tojson }}</script>
+<script src="{{ url_for('static', filename='paste.js') }}"></script>
+<script src="{{ url_for('static', filename='quote.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

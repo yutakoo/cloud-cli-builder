@@ -1,0 +1,7 @@
+# テスト用（Dockerfile の test ステージだけで使う。本番のイメージには入らない）
+pytest==9.2.0
+# 依存パッケージ
+iniconfig==2.3.1
+packaging==26.3
+pluggy==1.7.0
+Pygments==2.21.0

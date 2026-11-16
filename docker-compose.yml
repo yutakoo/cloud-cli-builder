@@ -1,0 +1,33 @@
+services:
+  cli-builder:
+    build:
+      context: .
+      target: app
+    image: cloud-cli-builder:latest
+    container_name: cloud-cli-builder
+    # Docker 標準のネットワーク（docker0）を使う。compose が作る専用ネットワークは、PC によっては
+    # ファイアウォール（iptables の新旧混在など）で外部に出られず、Claude の API に届かないことがあるため
+    network_mode: bridge
+    ports:
+      - "127.0.0.1:8080:8080"    # http://localhost:8080（このPCからだけ開ける。他の端末に公開しない）
+    env_file:
+      - path: .env               # Claude 連携の認証情報など（.env.example をコピーして作成）
+        required: false          # なくても起動します（Claude のボタンが使えないだけ）
+    volumes:
+      - cli-builder-data:/data   # お気に入り（favorites.db）。コンテナを作り直しても残ります
+    tmpfs:
+      - /tmp                     # Claude 実行時の一時ファイルはメモリ上に置き、ディスクに残さない
+    restart: unless-stopped
+
+  # テスト（docker compose run --rm test）。profiles を付けているので、docker compose up では起動しない
+  test:
+    build:
+      context: .
+      target: test
+    profiles: ["test"]
+    network_mode: none            # テストは外部に接続しない（Claude も実際には呼ばない）
+    tmpfs:
+      - /tmp
+
+volumes:
+  cli-builder-data:
