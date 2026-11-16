@@ -19,6 +19,7 @@
 7. [処理の流れ](#処理の流れ)
 8. [API 仕様](#api-仕様)
 9. [注意点](#注意点)
+10. [ライセンス](#ライセンス)
 
 ## 起動する
 
@@ -363,3 +364,17 @@ requirements-dev.txt  テスト用のライブラリ（バージョン固定）
 - 他の Web サイトから勝手に操作されないよう、書き込み系の API は、画面の JS が付ける専用ヘッダー（`X-CCB`）付きで、同じオリジンからのリクエストだけを受け付けます。
 - 画面に必要なもの（フォントを含む）はすべて同梱しているので、オフラインでも使えます。インターネットが必要なのは、Claude での日本語化と公式リファレンスへのリンクだけです。
 - PowerShell 5.1 では、JSON の引数のダブルクォートが崩れることがあります。JSON を渡すときは PowerShell 7.3 以降を使うか、`file://params.json` の形式にしてください。
+
+## ライセンス
+
+このリポジトリのコードは [MIT License](LICENSE) です。
+
+同梱・利用している次のものは、それぞれのライセンスに従います。
+
+| もの | ライセンス |
+|---|---|
+| フォント（IBM Plex Sans JP / Archivo / Martian Mono。`app/static/fonts/`） | SIL Open Font License 1.1（各フォントの `LICENSE-*.txt`） |
+| コマンドの定義と説明文（`app/ja_docs.json` の英文を含む） | [botocore](https://github.com/boto/botocore) 由来。Apache License 2.0 |
+| Claude Code（Docker イメージの作成時に取り込む） | Anthropic の利用規約。リポジトリには含まれません |
+
+このツールは AWS（Amazon Web Services）の公式ツールではなく、AWS とは関係ありません。「AWS」は Amazon.com, Inc. またはその関連会社の商標です。
